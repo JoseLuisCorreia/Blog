@@ -1,53 +1,57 @@
 package com.Generation.blogPessoal.service;
 
-import java.nio.charset.Charset;
-import org.apache.commons.codec.binary.Base64;
-import java.util.Optional;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.stereotype.Service;
+
+import java.nio.charset.Charset;
+import java.util.Optional;
+import org.apache.commons.codec.binary.Base64;
 
 import com.Generation.blogPessoal.model.UserLogin;
 import com.Generation.blogPessoal.model.Usuario;
 import com.Generation.blogPessoal.repository.UsuarioRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Service;
 
 @Service
 public class UsuarioService {
+	
 	@Autowired
 	private UsuarioRepository repository;
-	
-	public Usuario CadastrarUsuario(Usuario usuario) {
+
+	public Optional<Usuario> cadastrarUsuario(Usuario usuario) {
+		if(repository.findByUsuario(usuario.getUsuario()).isPresent()) {
+			return Optional.empty();
+		}
 		BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-		
+
 		String senhaEncoder = encoder.encode(usuario.getSenha());
 		usuario.setSenha(senhaEncoder);
-		
-		return repository.save(usuario);
+
+		return Optional.ofNullable(repository.save(usuario));
 	}
-	
-	public Optional<UserLogin> Logar(Optional<UserLogin> user){
+
+	public Optional<UserLogin> logar(Optional<UserLogin> user) {
+
 		BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 		Optional<Usuario> usuario = repository.findByUsuario(user.get().getUsuario());
-		
+
 		if (usuario.isPresent()) {
-			if(encoder.matches(user.get().getSenha(), usuario.get().getSenha())) {
-				
+			if (encoder.matches(user.get().getSenha(), usuario.get().getSenha())) {
+
 				String auth = user.get().getUsuario() + ":" + user.get().getSenha();
-				byte[] encodedAuth = Base64.encodeBase64(auth.getBytes(Charset.forName("US-ACII")));
+				byte[] encodedAuth = Base64.encodeBase64(auth.getBytes(Charset.forName("US-ASCII")));
 				String authHeader = "Basic " + new String(encodedAuth);
-				
-				user.get().setToken(authHeader);
+
+				user.get().setToken(authHeader);				
 				user.get().setNome(usuario.get().getNome());
-				user.get().setId(usuario.get().getId());
-				user.get().setFoto(usuario.get().getFoto());
-				user.get().setTipo(usuario.get().getTipo());
-				
+				user.get().setSenha(usuario.get().getSenha());
+
 				return user;
+
 			}
 		}
-		
-		return null;
+		return Optional.empty();
 	}
 
 }
